@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/nomoreai/db" VERSION="20261003" COMMENT="XMLDB file for Moodle local/nomoreai"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_nomoreai_signal" COMMENT="One recorded AI-agent signal: a refusal, a would-be refusal or a detection">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="User the signal is about; 0 before login"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Module, course or system context the signal was seen in"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="signaltype" TYPE="char" LENGTH="40" NOTNULL="true" SEQUENCE="false" COMMENT="Signal type, see \local_nomoreai\local\signals"/>
+        <FIELD NAME="detail" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Small JSON object with signal-specific values"/>
+        <FIELD NAME="mode" TYPE="char" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="detect or enforce, when recorded"/>
+        <FIELD NAME="outcome" TYPE="char" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="recorded or refused"/>
+        <FIELD NAME="origin" TYPE="char" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="web, ws or login"/>
+        <FIELD NAME="pageview" TYPE="char" LENGTH="32" NOTNULL="false" SEQUENCE="false" COMMENT="Browser page-view id, to record each browser signal once per page view"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="courseid_time" UNIQUE="false" FIELDS="courseid, timecreated"/>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="contextid" UNIQUE="false" FIELDS="contextid"/>
+        <INDEX NAME="cmid" UNIQUE="false" FIELDS="cmid"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+        <INDEX NAME="pageview" UNIQUE="false" FIELDS="pageview"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_nomoreai_cm" COMMENT="Per-activity settings">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="webonly" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 = refuse every web-service call for this activity"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="cmid" UNIQUE="true" FIELDS="cmid"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>

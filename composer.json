@@ -1,0 +1,20 @@
+{
+    "name": "adamjenkins/moodle-local_nomoreai",
+    "description": "Makes it as hard as practical for AI agents to do students' Moodle activities for them, and measures how often they are seen.",
+    "type": "moodle-local",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Adam Jenkins",
+            "email": "adam@wisecat.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/adamjenkins/moodle-local_nomoreai/issues",
+        "source": "https://github.com/adamjenkins/moodle-local_nomoreai"
+    },
+    "require": {
+        "moodle/moodle": ">=5.2",
+        "moodle/composer-installer": "*"
+    }
+}
