@@ -1,0 +1,27 @@
+# camp listing manifest — descriptive content for your plugin's page.
+# Edit freely and commit; camp ingests this file at each tagged release.
+# Schema: https://camp-registry.org/schema/listing.schema.json
+name: local_nomoreai
+summary: 'A Moodle local plugin that makes it harder for AI agents to do students'' activities for them and reports how often agents are seen.'
+description: |
+  For site administrators and teachers who want to measure and limit AI agents
+  completing student work. It has three modes (Off, Detect only, Enforce) and:
+
+  - refuses web-service calls that start, answer or submit student work, and can block student tokens
+  - refuses agents that identify themselves (Web Bot Auth, user agent or IP lists) on login, course and activity pages
+  - optionally flags browser automation through monitoring and quiz signals, for teachers to review
+  - adds a teacher signals report, a site dashboard and a web-service token audit
+
+  It cannot stop an agent that operates the student's own computer like a person.
+  Teachers and managers are exempt by default; students can be exempted through a role.
+labels:
+  # Required disclosure labels — pick all that apply (RFC §4.7):
+  #   fully-free | freemium | paid-service | external-account
+  #   donation-supported | commercial-support-available
+  - fully-free
+# screenshots:
+#   - path: .camp/screenshots/overview.png
+#     caption: Main view
+links:
+  docs: https://github.com/adamjenkins/moodle-local_nomoreai#readme
+  issues: https://github.com/adamjenkins/moodle-local_nomoreai/issues
