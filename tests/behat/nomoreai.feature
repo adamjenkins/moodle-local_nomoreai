@@ -54,9 +54,18 @@ Feature: No More AI notices, activity setting and reports
     When I am on the "Course 1" course page logged in as teacher1
     And I navigate to "AI agent signals" in current page administration
     Then I should see "These are indicators, not proof"
+    And I follow "Identified agents"
+    And I should see "Agents that identified themselves: signed agents"
     And I log in as "admin"
     And I navigate to "Reports > AI agent activity" in site administration
     And I should see "No signals recorded."
+    And I should see "Who triggered signals"
+    And I follow "Courses and activities"
+    And I should see "The courses and activities where the most signals were seen."
+    And I follow "Signal types"
+    And I should see "How often each kind of signal was seen"
+    And I follow "Identified agents"
+    And I should see "Agents that identified themselves: signed agents"
     And I navigate to "Plugins > Local plugins > Web service token audit" in site administration
     And I should see "No user who lacks an exemption holds a web service token or a personal access token."
     And I navigate to "Plugins > Local plugins > No More AI" in site administration

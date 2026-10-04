@@ -4,6 +4,14 @@ All notable changes to this plugin are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+
+- The site dashboard and the course report are now tabbed reports: Users, Courses and activities, Signal
+  types and Identified agents, sharing one implementation (`classes/local/reports.php`). Users, courses and
+  activities are linked everywhere; users link to their course profile.
+
 ## [0.1.2] - 2026-10-04
 
 ### Changed

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Teacher report: AI agent signals in a course.
+ * Teacher report: AI agent signals in a course, in tabs by user, activity, signal type and identified agent.
  *
  * @package    local_nomoreai
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
@@ -25,55 +25,38 @@
 require(__DIR__ . '/../../config.php');
 
 use local_nomoreai\local\report_helper;
+use local_nomoreai\local\reports;
 use local_nomoreai\local\signals;
 
 $id = required_param('id', PARAM_INT);
 $cmid = optional_param('cmid', 0, PARAM_INT);
+$tab = reports::valid_tab(optional_param('tab', reports::TAB_USERS, PARAM_ALPHA));
 
 $course = get_course($id);
 require_login($course);
 $context = context_course::instance($course->id);
 require_capability('local/nomoreai:viewreport', $context);
 
-$url = new moodle_url('/local/nomoreai/report.php', ['id' => $course->id]);
-if ($cmid) {
-    $url->param('cmid', $cmid);
+$modinfo = get_fast_modinfo($course);
+if (
+    $cmid && !isset($modinfo->get_cms()[$cmid]) &&
+        !$DB->record_exists(signals::TABLE, ['courseid' => $course->id, 'cmid' => $cmid])
+) {
+    // An activity of another course: ignore it rather than report on it.
+    $cmid = 0;
 }
-$PAGE->set_url($url);
+
+$baseurl = new moodle_url('/local/nomoreai/report.php', ['id' => $course->id]);
+if ($cmid) {
+    $baseurl->param('cmid', $cmid);
+}
+$PAGE->set_url(new moodle_url($baseurl, ['tab' => $tab]));
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('report');
 $PAGE->set_title(get_string('report', 'local_nomoreai'));
 $PAGE->set_heading(format_string($course->fullname, true, ['context' => $context]));
 
-$params = ['courseid' => $course->id];
-$where = 'courseid = :courseid';
-if ($cmid) {
-    $where .= ' AND cmid = :cmid';
-    $params['cmid'] = $cmid;
-}
-$rows = $DB->get_records_sql(
-    "SELECT " . $DB->sql_concat_join("'-'", ['userid', 'cmid', 'signaltype']) . " AS rowkey,
-            userid, cmid, signaltype, COUNT(1) AS n, MAX(timecreated) AS lastseen
-       FROM {" . signals::TABLE . "}
-      WHERE $where
-   GROUP BY userid, cmid, signaltype
-   ORDER BY userid, cmid",
-    $params
-);
-
-// One table row per student and activity.
-$grouped = [];
-foreach ($rows as $row) {
-    $key = $row->userid . '-' . $row->cmid;
-    $grouped[$key] = $grouped[$key] ?? ['userid' => (int) $row->userid, 'cmid' => (int) $row->cmid, 'signals' => [],
-        'lastseen' => 0];
-    $grouped[$key]['signals'][$row->signaltype] = (int) $row->n;
-    $grouped[$key]['lastseen'] = max($grouped[$key]['lastseen'], (int) $row->lastseen);
-}
-
-$userids = array_unique(array_column($grouped, 'userid'));
-$users = $userids ? $DB->get_records_list('user', 'id', $userids) : [];
-$modinfo = get_fast_modinfo($course);
+$reports = new reports($course, $cmid);
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('report', 'local_nomoreai'));
@@ -84,7 +67,7 @@ echo $OUTPUT->notification(
 );
 echo report_helper::mode_notice();
 
-// Activity filter.
+// Activity filter, kept across tabs.
 $options = [0 => get_string('allactivities', 'local_nomoreai')];
 foreach (
     $DB->get_fieldset_sql(
@@ -95,35 +78,14 @@ foreach (
     $options[$optioncmid] = report_helper::activity_name($modinfo, (int) $optioncmid);
 }
 echo $OUTPUT->single_select(
-    new moodle_url('/local/nomoreai/report.php', ['id' => $course->id]),
+    new moodle_url('/local/nomoreai/report.php', ['id' => $course->id, 'tab' => $tab]),
     'cmid',
     $options,
     $cmid,
     null
 );
 
-if (!$grouped) {
-    echo $OUTPUT->notification(get_string('nosignals', 'local_nomoreai'), \core\output\notification::NOTIFY_INFO, false);
-} else {
-    $table = new html_table();
-    $table->head = [get_string('student', 'local_nomoreai'), get_string('activity'), get_string('signals', 'local_nomoreai'),
-        get_string('lastseen', 'local_nomoreai')];
-    $table->attributes['class'] = 'generaltable local-nomoreai-report';
-    foreach ($grouped as $item) {
-        $user = $users[$item['userid']] ?? null;
-        $name = $user ? s(fullname($user)) : s(get_string('notloggedin', 'local_nomoreai'));
-        if ($user) {
-            $name = html_writer::link(new moodle_url('/user/view.php', ['id' => $user->id, 'course' => $course->id]), $name);
-        }
-        $table->data[] = [
-            $name,
-            s(report_helper::activity_name($modinfo, $item['cmid'])),
-            report_helper::signal_list($item['signals']),
-            userdate($item['lastseen']),
-        ];
-    }
-    echo html_writer::table($table);
-}
-
+echo $reports->tabtree($baseurl, $tab);
+echo $reports->render($tab);
 echo report_helper::legend();
 echo $OUTPUT->footer();

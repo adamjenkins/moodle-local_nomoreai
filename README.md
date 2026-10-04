@@ -59,10 +59,18 @@ through any web-service token in Enforce, not even for reading.
 
 ### Reports
 
-- **AI agent signals** (course navigation, `local/nomoreai:viewreport`): signals per student and activity, with
-  what else can cause each one. They are indicators, not proof.
-- **AI agent activity** (Site administration > Reports, `local/nomoreai:viewdashboard`): weekly counts,
-  distinct users, top activities and the agents that identified themselves.
+- **AI agent activity** (Site administration > Reports, `local/nomoreai:viewdashboard`) and **AI agent
+  signals** (course navigation, `local/nomoreai:viewreport`, limited to that course and filterable by
+  activity) show the same four tabs:
+  - **Users**: who triggered signals, in which course and activities, with their signals and when last seen.
+  - **Courses and activities**: where the most signals were seen, and by how many users.
+  - **Signal types**: totals, refusals, users and activities per signal, what else can cause each one, and
+    counts per week for the last 12 weeks.
+  - **Identified agents**: each agent that identified itself (signed agent name, agent user agent or listed
+    IP address), the users it acted as and where it was seen, including the login page.
+
+  Every user, course and activity is linked: users to their profile in that course (their site profile for
+  site-level signals), courses to the course and activities to the activity. Signals are indicators, not proof.
 - **Web service token audit** (Site administration > Plugins > Local plugins): web-service tokens, and from
   Moodle 5.3 personal access tokens, held by users who are not exempt, with a purge button. Moodle keeps using an existing token without re-checking permissions, so
   removing a permission does not cut off a student who already holds one.

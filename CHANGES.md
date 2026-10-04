@@ -1,5 +1,12 @@
 # Changes
 
+## Unreleased
+
+- The site dashboard (AI agent activity) and the course report (AI agent signals) now show four tabs: Users,
+  Courses and activities, Signal types (with counts per week) and Identified agents (which agent, acting as
+  which users, where). Every user, course and activity listed is a link: users go to their profile in that
+  course.
+
 ## v0.1.2
 
 - The plugin's maturity is now Beta (it was Alpha).
