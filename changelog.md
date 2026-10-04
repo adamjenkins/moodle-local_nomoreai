@@ -4,7 +4,14 @@ All notable changes to this plugin are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.1.2] - 2026-10-04
+
+### Changed
+
+- Maturity raised from Alpha to Beta (`$plugin->maturity = MATURITY_BETA`).
+- composer.json's `moodle/moodle` constraint is now `^5.2` (was `>=5.2`).
+- CI tests `MOODLE_503_STABLE` (PHP 8.3-8.4, PostgreSQL 17, MariaDB 11.4) as blocking rows, replacing the
+  non-blocking moodle.git `main` rows.
 
 ### Fixed
 
