@@ -14,7 +14,7 @@
         "source": "https://github.com/adamjenkins/moodle-local_nomoreai"
     },
     "require": {
-        "moodle/moodle": ">=5.2",
+        "moodle/moodle": "^5.2",
         "moodle/composer-installer": "*"
     }
 }
