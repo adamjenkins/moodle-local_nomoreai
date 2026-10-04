@@ -4,7 +4,7 @@ All notable changes to this plugin are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.1.1] - 2026-10-04
 
 ### Added
 
@@ -19,3 +19,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Teacher report "AI agent signals", admin dashboard "AI agent activity", web service token audit with purge.
 - Capabilities `local/nomoreai:exempt`, `local/nomoreai:notmonitored`, `local/nomoreai:viewreport`,
   `local/nomoreai:viewdashboard`; trusted networks setting; 90-day signal retention; privacy provider.
+- Support for Moodle 5.2 and 5.3.
+- `composer.json` for installation with Composer.

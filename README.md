@@ -22,7 +22,7 @@ restriction, and consider assessment designs that do not rely on unsupervised on
 1. Copy the plugin to `public/local/nomoreai` in your Moodle code.
 2. Visit Site administration > Notifications.
 
-Requires Moodle 5.2. Installing changes nothing: the mode starts at **Off**.
+Requires Moodle 5.2 or 5.3. Installing changes nothing: the mode starts at **Off**.
 
 ## Use
 
