@@ -58,6 +58,6 @@ Feature: No More AI notices, activity setting and reports
     And I navigate to "Reports > AI agent activity" in site administration
     And I should see "No signals recorded."
     And I navigate to "Plugins > Local plugins > Web service token audit" in site administration
-    And I should see "No user who lacks an exemption holds a web service token."
+    And I should see "No user who lacks an exemption holds a web service token or a personal access token."
     And I navigate to "Plugins > Local plugins > No More AI" in site administration
     And I should see "Block tokens"
