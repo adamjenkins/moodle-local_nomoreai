@@ -138,7 +138,7 @@ class tokens {
      * @return \stdClass|null object with id and userid; null when the site has no personal access tokens or the
      *     credential is not a working one
      */
-    public static function personal_token(#[\SensitiveParameter] string $credential): ?\stdClass {
+    public static function personal_token(string $credential): ?\stdClass {
         $repository = \core\api\repository\api_token_repository::class;
         if (!str_starts_with($credential, self::PERSONAL_PREFIX) || !class_exists($repository)) {
             return null;

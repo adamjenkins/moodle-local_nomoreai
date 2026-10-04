@@ -166,7 +166,7 @@ class enforcer {
      * @return void
      * @throws \moodle_exception under PHPUnit when the request is refused
      */
-    public static function personal_access_token(#[\SensitiveParameter] ?string $authorization = null): void {
+    public static function personal_access_token(?string $authorization = null): void {
         $authorization = $authorization ?? self::authorization_header();
         $prefix = 'Bearer ' . tokens::PERSONAL_PREFIX;
         if (strncasecmp($authorization, $prefix, strlen($prefix)) !== 0) {
