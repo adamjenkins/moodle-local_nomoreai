@@ -19,6 +19,7 @@ namespace local_nomoreai;
 use core_external\external_api;
 use local_nomoreai\local\enforcer;
 use local_nomoreai\local\signals;
+use local_nomoreai\local\tokens;
 use local_nomoreai\local\webonly;
 
 /**
@@ -29,6 +30,7 @@ use local_nomoreai\local\webonly;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_nomoreai\local\enforcer::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_nomoreai\local\tokens::class)]
 final class enforcer_test extends \advanced_testcase {
     /** @var \stdClass */
     private $course;
@@ -56,7 +58,7 @@ final class enforcer_test extends \advanced_testcase {
 
     protected function tearDown(): void {
         enforcer::reset();
-        unset($_SERVER['HTTP_SIGNATURE_AGENT'], $_SERVER['REMOTE_ADDR']);
+        unset($_SERVER['HTTP_SIGNATURE_AGENT'], $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_AUTHORIZATION']);
         $_SERVER['HTTP_USER_AGENT'] = '';
         parent::tearDown();
     }
@@ -278,5 +280,79 @@ final class enforcer_test extends \advanced_testcase {
         require_login($this->course, false, $cm, false, true);
         require_login($this->course, false, $cm, false, true);
         $this->assertEquals(1, $GLOBALS['DB']->count_records(signals::TABLE, ['signaltype' => signals::AGENT_UA]));
+    }
+
+    /**
+     * Create a personal access token (Moodle 5.3, MDL-87706) and the credential a client would send for it.
+     *
+     * Skips the test on branches without personal access tokens.
+     *
+     * @param int $userid owner
+     * @return array [token id, credential]
+     */
+    private function personal_token(int $userid): array {
+        if (!tokens::personal_tokens_supported()) {
+            $this->markTestSkipped('Personal access tokens need Moodle 5.3 (MDL-87706).');
+        }
+        $secret = random_string(32);
+        $id = (new \core\api\repository\api_token_repository())
+            ->create_token('AI tool', $secret, $userid, ['x'], null, time() + DAYSECS)
+            ->get_id();
+        // The format core\api\token_manager::issue_token() hands to the user.
+        return [$id, rtrim(tokens::PERSONAL_PREFIX . base64_encode($id . '/' . $secret), '=')];
+    }
+
+    public function test_block_tokens_refuses_personal_access_token_for_students_only(): void {
+        global $DB;
+        set_config('mode', 'enforce', 'local_nomoreai');
+        set_config('blocktokens', 1, 'local_nomoreai');
+        [$studentid, $studentcredential] = $this->personal_token((int) $this->student->id);
+        [$teacherid, $teachercredential] = $this->personal_token((int) $this->teacher->id);
+
+        // A forged credential naming the student's token but carrying the wrong secret is left to core: nothing
+        // is refused, recorded or deleted on its account.
+        enforcer::personal_access_token('Bearer ' . rtrim(tokens::PERSONAL_PREFIX . base64_encode($studentid . '/x'), '='));
+        $this->assertTrue($DB->record_exists('rest_api_tokens', ['id' => $studentid]));
+
+        // An exempt teacher's token works.
+        enforcer::personal_access_token('Bearer ' . $teachercredential);
+        $this->assertTrue($DB->record_exists('rest_api_tokens', ['id' => $teacherid]));
+        $this->assertFalse($DB->record_exists(signals::TABLE, ['signaltype' => signals::TOKEN_BLOCKED]));
+
+        // The student's request, read from the real header at the end of setup, is refused and the token deleted.
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $studentcredential;
+        try {
+            enforcer::after_config();
+            $this->fail('Expected a refusal');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('refused', $e->errorcode);
+        }
+        $this->assertFalse($DB->record_exists('rest_api_tokens', ['id' => $studentid]));
+        $this->assertTrue($DB->record_exists(
+            signals::TABLE,
+            ['signaltype' => signals::TOKEN_BLOCKED, 'userid' => $this->student->id, 'outcome' => 'refused']
+        ));
+    }
+
+    public function test_detect_records_personal_access_token_use_without_refusing(): void {
+        global $DB;
+        set_config('mode', 'detect', 'local_nomoreai');
+        set_config('blocktokens', 1, 'local_nomoreai');
+        [$id, $credential] = $this->personal_token((int) $this->student->id);
+
+        enforcer::personal_access_token('Bearer ' . $credential);
+        enforcer::personal_access_token('Bearer ' . $credential);
+
+        $this->assertTrue($DB->record_exists('rest_api_tokens', ['id' => $id]));
+        // Recorded once per user and day.
+        $this->assertEquals(1, $DB->count_records(
+            signals::TABLE,
+            ['signaltype' => signals::TOKEN_BLOCKED, 'userid' => $this->student->id, 'outcome' => 'recorded']
+        ));
+
+        // With Block tokens off nothing more is recorded.
+        set_config('blocktokens', 0, 'local_nomoreai');
+        enforcer::personal_access_token('Bearer ' . $credential);
+        $this->assertEquals(1, $DB->count_records(signals::TABLE, ['signaltype' => signals::TOKEN_BLOCKED]));
     }
 }

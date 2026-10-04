@@ -120,7 +120,8 @@ class enforcer {
     }
 
     /**
-     * Called at the end of setup (after_config hook): agent refusal on the login page.
+     * Called at the end of setup (after_config hook): Block tokens for personal access tokens, and agent
+     * refusal on the login page.
      *
      * The login page is checked for everyone because nobody is known yet; staff using a signed agent can
      * be let through with the trusted networks setting.
@@ -130,6 +131,8 @@ class enforcer {
      */
     public static function after_config(): void {
         global $SCRIPT;
+
+        self::personal_access_token();
 
         // No CLI_SCRIPT guard: CLI scripts never have the login page as $SCRIPT, and the guard would make
         // this untestable under PHPUnit (where CLI_SCRIPT is true).
@@ -148,6 +151,83 @@ class enforcer {
             $key = 'l' . date('YmdH') . substr(sha1($hit['client'] . '|' . getremoteaddr()), 0, 21);
             self::act($hit['signal'], null, ['client' => $hit['client']], $key);
         }
+    }
+
+    /**
+     * Block tokens for personal access tokens (Moodle 5.3 and later, MDL-87706).
+     *
+     * A personal access token is used through the routing API (Authorization: Bearer pat_...), which never
+     * defines WS_SERVER or reaches the web-service callbacks, and core raises no event when one is created. So
+     * the request is checked here, at the end of setup, before core's API middleware logs its owner in. In
+     * Enforce the token is deleted, as Block tokens deletes the web-service tokens of users who are not exempt,
+     * and the request is refused.
+     *
+     * @param string|null $authorization the Authorization header; null to read it from the request
+     * @return void
+     * @throws \moodle_exception under PHPUnit when the request is refused
+     */
+    public static function personal_access_token(#[\SensitiveParameter] ?string $authorization = null): void {
+        $authorization = $authorization ?? self::authorization_header();
+        $prefix = 'Bearer ' . tokens::PERSONAL_PREFIX;
+        if (strncasecmp($authorization, $prefix, strlen($prefix)) !== 0) {
+            return;
+        }
+        if (!config::active() || !config::enabled('blocktokens') || exemption::trusted_network()) {
+            return;
+        }
+        $token = tokens::personal_token(trim(substr($authorization, strlen('Bearer '))));
+        if (!$token || exemption::is_exempt_anywhere($token->userid)) {
+            return;
+        }
+        $enforce = config::enforcing();
+        signals::record(signals::TOKEN_BLOCKED, null, ['personaltoken' => 1], $enforce, $token->userid, self::daykey(null));
+        if (!$enforce) {
+            return;
+        }
+        tokens::delete_personal_token($token->id);
+        if (defined('PHPUNIT_TEST') && PHPUNIT_TEST) {
+            throw new \moodle_exception('refused', 'local_nomoreai');
+        }
+        self::refuse_api();
+    }
+
+    /**
+     * The request's Authorization header, or '' when there is none.
+     *
+     * @return string
+     */
+    private static function authorization_header(): string {
+        foreach (['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION'] as $key) {
+            if (!empty($_SERVER[$key])) {
+                return (string) $_SERVER[$key];
+            }
+        }
+        if (function_exists('getallheaders')) {
+            foreach ((array) getallheaders() as $name => $value) {
+                if (strtolower((string) $name) === 'authorization') {
+                    return (string) $value;
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Send a JSON 403 response to an API client and stop.
+     *
+     * @return never
+     */
+    private static function refuse_api(): never {
+        if (!headers_sent()) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
+        }
+        echo json_encode([
+            'error' => 'access_denied',
+            'message' => get_string('refused', 'local_nomoreai'),
+        ]);
+        exit;
     }
 
     /**

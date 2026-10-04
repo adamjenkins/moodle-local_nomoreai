@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Token audit: web-service tokens held by users who are not exempt, with a purge action.
+ * Token audit: web-service and personal access tokens held by users who are not exempt, with a purge action.
  *
  * @package    local_nomoreai
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
@@ -68,7 +68,9 @@ if (!$list) {
     foreach ($list as $token) {
         $table->data[] = [
             html_writer::link(new moodle_url('/user/profile.php', ['id' => $token->userid]), s(fullname($token))),
-            s((string) ($token->servicename ?? $token->serviceshortname ?? '')),
+            $token->kind === tokens::KIND_PERSONAL
+                ? get_string('personalaccesstoken', 'local_nomoreai')
+                : s((string) ($token->servicename ?? $token->serviceshortname ?? '')),
             s((string) $token->name),
             userdate($token->timecreated),
             $token->lastaccess ? userdate($token->lastaccess) : get_string('never'),

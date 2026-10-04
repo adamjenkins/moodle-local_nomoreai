@@ -4,6 +4,14 @@ All notable changes to this plugin are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Block tokens and the web service token audit now cover Moodle 5.3 personal access tokens (MDL-87706,
+  `moodle/api:createtoken`): the audit lists and purges working personal access tokens of users who are not
+  exempt, and with Block tokens on their use is recorded and, in Enforce, refused and the token deleted.
+
 ## [0.1.1] - 2026-10-04
 
 ### Added

@@ -30,7 +30,7 @@ use local_nomoreai\local\pageview;
  */
 class hook_callbacks {
     /**
-     * End of setup: agent refusal on the login page.
+     * End of setup: Block tokens for personal access tokens, and agent refusal on the login page.
      *
      * @param \core\hook\after_config $hook
      * @return void

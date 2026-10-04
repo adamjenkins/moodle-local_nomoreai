@@ -113,6 +113,44 @@ final class detection_test extends \advanced_testcase {
         $this->assertTrue($DB->record_exists('external_tokens', ['userid' => $teacher->id]));
     }
 
+    public function test_audit_and_purge_cover_personal_access_tokens(): void {
+        global $DB;
+        if (!tokens::personal_tokens_supported()) {
+            $this->markTestSkipped('Personal access tokens need Moodle 5.3 (MDL-87706).');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
+
+        // A web-service token of the student's, whose id may equal a personal access token's id: the purge must
+        // delete each from its own table.
+        $service = $DB->get_record('external_services', ['shortname' => MOODLE_OFFICIAL_MOBILE_SERVICE]);
+        $this->setUser($student);
+        \core_external\util::generate_token_for_current_user($service);
+        $this->setAdminUser();
+
+        $repository = new \core\api\repository\api_token_repository();
+        $expiry = time() + DAYSECS;
+        $active = $repository->create_token('AI tool', random_string(32), $student->id, ['x'], null, $expiry)->get_id();
+        $revoked = $repository->create_token('Old', random_string(32), $student->id, ['x'], null, $expiry)->get_id();
+        $repository->revoke_token($revoked);
+        $teachers = $repository->create_token('Mine', random_string(32), $teacher->id, ['x'], null, $expiry)->get_id();
+
+        $list = tokens::nonexempt_tokens();
+        $this->assertCount(2, $list);
+        $personal = array_values(array_filter($list, fn($t) => $t->kind === tokens::KIND_PERSONAL));
+        $this->assertCount(1, $personal);
+        $this->assertEquals($active, $personal[0]->id);
+        $this->assertEquals($student->id, $personal[0]->userid);
+
+        $this->assertSame(2, tokens::purge_nonexempt());
+        $this->assertFalse($DB->record_exists('rest_api_tokens', ['id' => $active]));
+        $this->assertEquals(0, $DB->count_records('external_tokens', ['userid' => $student->id]));
+        // A revoked token no longer works and is not listed; the exempt teacher's token is kept.
+        $this->assertTrue($DB->record_exists('rest_api_tokens', ['id' => $revoked]));
+        $this->assertTrue($DB->record_exists('rest_api_tokens', ['id' => $teachers]));
+    }
+
     public function test_pageview_summary_records_signals_once(): void {
         global $DB;
         set_config('mode', 'detect', 'local_nomoreai');

@@ -31,6 +31,6 @@ class purge_tokens extends \core\task\adhoc_task {
      */
     public function execute(): void {
         $count = \local_nomoreai\local\tokens::purge_nonexempt();
-        mtrace("local_nomoreai: deleted $count web service tokens of non-exempt users.");
+        mtrace("local_nomoreai: deleted $count web service and personal access tokens of non-exempt users.");
     }
 }

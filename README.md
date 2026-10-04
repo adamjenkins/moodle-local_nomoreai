@@ -38,7 +38,8 @@ Settings: Site administration > Plugins > Local plugins > No More AI.
   quizzes, assignments, forums, lessons, H5P, workshops, glossaries, databases, wikis, choices, feedback and
   SCORM. Students keep the Moodle app for reading.
 - **Block tokens** (off): students cannot create or use web-service tokens, and their existing tokens are
-  deleted. **The Moodle app stops working for them.**
+  deleted. **The Moodle app stops working for them.** From Moodle 5.3 this also covers personal access tokens
+  (`moodle/api:createtoken`): a student's use of one is refused and the token deleted.
 - **Refuse identified agents** (on), with editable lists of agent user-agent tokens and IP addresses.
 - **Notice** (on): a visible notice at the top of activity pages in Enforce, addressed to people and agents.
 - **Browser monitoring** (off): counts automation flags, known agents' page traces, text entered without key
@@ -62,8 +63,8 @@ through any web-service token in Enforce, not even for reading.
   what else can cause each one. They are indicators, not proof.
 - **AI agent activity** (Site administration > Reports, `local/nomoreai:viewdashboard`): weekly counts,
   distinct users, top activities and the agents that identified themselves.
-- **Web service token audit** (Site administration > Plugins > Local plugins): tokens held by users who are not
-  exempt, with a purge button. Moodle keeps using an existing token without re-checking permissions, so
+- **Web service token audit** (Site administration > Plugins > Local plugins): web-service tokens, and from
+  Moodle 5.3 personal access tokens, held by users who are not exempt, with a purge button. Moodle keeps using an existing token without re-checking permissions, so
   removing a permission does not cut off a student who already holds one.
 
 ## Privacy

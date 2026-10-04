@@ -1,5 +1,12 @@
 # Changes
 
+## [Unreleased]
+
+- Block tokens and the token audit now cover the personal access tokens users can create from Moodle 5.3
+  (MDL-87706, capability `moodle/api:createtoken`). The audit lists and purges the working personal access
+  tokens of users who are not exempt, and with Block tokens on, such a user's use of one is recorded and, in
+  Enforce, refused and the token deleted. Moodle 5.2 is unaffected.
+
 ## v0.1.1
 
 - First version. Modes Off (default), Detect only and Enforce. Refuses, or in Detect only records, agents
