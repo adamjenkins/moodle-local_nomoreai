@@ -19,9 +19,23 @@ labels:
   #   fully-free | freemium | paid-service | external-account
   #   donation-supported | commercial-support-available
   - fully-free
-# screenshots:
-#   - path: .camp/screenshots/overview.png
-#     caption: Main view
+screenshots:
+  - path: .camp/screenshots/01-signals-report.png
+    caption: 'The teacher''s AI agent signals report: signals per student and activity, with a reminder that they are indicators, not proof.'
+  - path: .camp/screenshots/02-signals-one-activity.png
+    caption: 'The same report filtered to one quiz: work submitted through a token, an automated browser, AI agent traces in the page.'
+  - path: .camp/screenshots/03-signal-legend.png
+    caption: Every signal is explained, with what else can cause it.
+  - path: .camp/screenshots/04-web-browser-only.png
+    caption: 'The per-activity "Web browser only" option: no Moodle app, web-service token or AI tool for this activity.'
+  - path: .camp/screenshots/05-site-dashboard.png
+    caption: 'The site dashboard: signals per week and distinct users, to measure agent use in Detect only mode before enforcing.'
+  - path: .camp/screenshots/06-dashboard-activities-agents.png
+    caption: The activities with the most signals, and the agents that identified themselves.
+  - path: .camp/screenshots/07-token-audit.png
+    caption: 'The token audit: tokens students created for themselves (the Moodle app, an MCP tool), with a purge button.'
+  - path: .camp/screenshots/08-admin-settings.png
+    caption: 'Settings: the mode (Off, Detect only, Enforce) and trusted networks.'
 links:
   docs: https://github.com/adamjenkins/moodle-local_nomoreai#readme
   issues: https://github.com/adamjenkins/moodle-local_nomoreai/issues
