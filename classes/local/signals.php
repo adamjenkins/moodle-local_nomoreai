@@ -56,6 +56,12 @@ class signals {
     public const NO_PAGEVIEW = 'answer_without_pageview';
     /** @var string Quiz attempt much faster than the class median. */
     public const FAST = 'fast_completion';
+    /** @var string Most measured clicks landed dead centre on their control. */
+    public const CENTRE_CLICKS = 'centre_clicks';
+    /** @var string Key presses came too fast or too evenly for a person. */
+    public const MACHINE_TYPING = 'machine_typing';
+    /** @var string The first click or answer came faster than a person can react. */
+    public const INSTANT = 'instant_interaction';
 
     /**
      * All signal types, in report order.
@@ -66,7 +72,7 @@ class signals {
         return [
             self::SIGNED_AGENT, self::AGENT_UA, self::AGENT_IP, self::WS_SUBMISSION, self::TOKEN_BLOCKED,
             self::WEBONLY, self::WEBDRIVER, self::ARTIFACT, self::TEXT_WITHOUT_KEYS, self::CLICKS_WITHOUT_POINTER,
-            self::PASTE, self::NO_PAGEVIEW, self::FAST,
+            self::PASTE, self::CENTRE_CLICKS, self::MACHINE_TYPING, self::INSTANT, self::NO_PAGEVIEW, self::FAST,
         ];
     }
 

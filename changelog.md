@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Signals `centre_clicks`, `machine_typing` and `instant_interaction` from new browser measurements (click
+  offset from the control's centre, median and variation of key gaps, time to the first click or answer),
+  with threshold settings `centreratio`, `centreminclicks`, `keymedianms`, `keycv`, `keyminintervals` and
+  `instantms`.
+- Table `local_nomoreai_metric` (anonymous per-page-view measurements) and a Calibration report tab.
+- `pix/icon.svg`.
+
 ### Changed
 
 - The site dashboard and the course report are now tabbed reports: Users, Courses and activities, Signal

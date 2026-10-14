@@ -172,6 +172,54 @@ if ($hassiteconfig) {
         4
     ));
     $settings->add(new admin_setting_configtext(
+        'local_nomoreai/centreratio',
+        new lang_string('centreratio', 'local_nomoreai'),
+        new lang_string('centreratio_desc', 'local_nomoreai'),
+        $d['centreratio'],
+        PARAM_FLOAT,
+        6
+    ));
+    $settings->add(new admin_setting_configtext(
+        'local_nomoreai/centreminclicks',
+        new lang_string('centreminclicks', 'local_nomoreai'),
+        new lang_string('centreminclicks_desc', 'local_nomoreai'),
+        $d['centreminclicks'],
+        PARAM_INT,
+        6
+    ));
+    $settings->add(new admin_setting_configtext(
+        'local_nomoreai/keymedianms',
+        new lang_string('keymedianms', 'local_nomoreai'),
+        new lang_string('keymedianms_desc', 'local_nomoreai'),
+        $d['keymedianms'],
+        PARAM_INT,
+        6
+    ));
+    $settings->add(new admin_setting_configtext(
+        'local_nomoreai/keycv',
+        new lang_string('keycv', 'local_nomoreai'),
+        new lang_string('keycv_desc', 'local_nomoreai'),
+        $d['keycv'],
+        PARAM_FLOAT,
+        6
+    ));
+    $settings->add(new admin_setting_configtext(
+        'local_nomoreai/keyminintervals',
+        new lang_string('keyminintervals', 'local_nomoreai'),
+        new lang_string('keyminintervals_desc', 'local_nomoreai'),
+        $d['keyminintervals'],
+        PARAM_INT,
+        6
+    ));
+    $settings->add(new admin_setting_configtext(
+        'local_nomoreai/instantms',
+        new lang_string('instantms', 'local_nomoreai'),
+        new lang_string('instantms_desc', 'local_nomoreai'),
+        $d['instantms'],
+        PARAM_INT,
+        6
+    ));
+    $settings->add(new admin_setting_configtext(
         'local_nomoreai/fastfraction',
         new lang_string('fastfraction', 'local_nomoreai'),
         new lang_string('fastfraction_desc', 'local_nomoreai'),

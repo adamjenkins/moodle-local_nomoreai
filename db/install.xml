@@ -31,6 +31,35 @@
         <INDEX NAME="pageview" UNIQUE="false" FIELDS="pageview"/>
       </INDEXES>
     </TABLE>
+    <TABLE NAME="local_nomoreai_metric" COMMENT="Anonymous per-page-view browser measurements, for calibrating the behavioural thresholds. No user id is stored">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="pageview" TYPE="char" LENGTH="32" NOTNULL="true" SEQUENCE="false" COMMENT="Random page-view id from the browser"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="clicks" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Pointer clicks"/>
+        <FIELD NAME="clickswithoutmove" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="measuredclicks" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Clicks on a control big enough to measure"/>
+        <FIELD NAME="centreclicks" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Measured clicks that landed dead centre"/>
+        <FIELD NAME="keyintervals" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Gaps between typed keys measured"/>
+        <FIELD NAME="keymedian" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Median gap between typed keys, ms"/>
+        <FIELD NAME="keycv" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Variation of the gaps (standard deviation / mean), thousandths"/>
+        <FIELD NAME="firstinputms" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Time from the page becoming ready to the first click or answer, ms"/>
+        <FIELD NAME="textwithoutkeys" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="pointermoves" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="scrolls" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="pageview_cmid" UNIQUE="true" FIELDS="pageview, cmid"/>
+        <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
     <TABLE NAME="local_nomoreai_cm" COMMENT="Per-activity settings">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>

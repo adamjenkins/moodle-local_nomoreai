@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Browser monitoring now also spots clicks that land dead centre on their button, machine-like typing (too fast
+  or too evenly spaced) and reactions faster than a person can manage. Like the other browser signals these are
+  only recorded for teachers, never used to refuse anything. Their thresholds are settings.
+- A new Calibration tab shows how ordinary page views on the site spread on each of these measures and how
+  many each threshold would flag. Its measurements are stored without any user id.
+- The plugin has an icon.
+
 - The site dashboard (AI agent activity) and the course report (AI agent signals) now show four tabs: Users,
   Courses and activities, Signal types (with counts per week) and Identified agents (which agent, acting as
   which users, where). Every user, course and activity listed is a link: users go to their profile in that

@@ -16,7 +16,8 @@
 /**
  * Browser monitor: sends a page-view summary of counts and booleans only.
  *
- * Nothing typed, no key timings and no pointer paths leave the browser. Clicks made from the keyboard
+ * Nothing typed, no individual key timings and no pointer paths leave the browser: only counts, and for typing
+ * rhythm a median gap and how much the gaps vary. Clicks made from the keyboard
  * (Enter or Space on a control, which is how keyboard and screen-reader users click) have event.detail 0
  * and are not counted, so they cannot look like "clicks without pointer movement".
  *
@@ -32,6 +33,40 @@ const SEND_INTERVAL = 30000;
 
 /** @var {number} How recent a key press or pointer move must be to count as "just before", in ms. */
 const RECENT = 1000;
+
+/** @var {number} Distance from a control's centre, as a share of its half-size, that counts as "dead centre". */
+const CENTRE = 0.05;
+
+/** @var {number} Pixels of slack around the centre, for browsers' whole-pixel click coordinates. */
+const PIXEL_SLACK = 1.5;
+
+/** @var {number} Gaps between key presses longer than this (ms) are pauses, not typing rhythm. */
+const MAX_KEY_GAP = 2000;
+
+/** @var {number} Most recent key gaps kept to compute the typing rhythm. */
+const MAX_KEY_GAPS = 500;
+
+/** @var {string} Controls whose centre a click is measured against. */
+const CONTROLS = 'button, a, input, select, textarea, label, summary, [role="button"], [role="link"], [role="checkbox"], ' +
+    '[role="radio"], [role="option"], [role="menuitem"], [role="tab"]';
+
+/**
+ * Median and coefficient of variation (standard deviation / mean, in thousandths) of a list of gaps.
+ *
+ * @param {number[]} gaps
+ * @returns {{median: number, cv: number}}
+ */
+const rhythm = (gaps) => {
+    if (!gaps.length) {
+        return {median: 0, cv: 0};
+    }
+    const sorted = gaps.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    const variance = gaps.reduce((a, b) => a + (b - mean) * (b - mean), 0) / gaps.length;
+    return {median: Math.round(median), cv: mean > 0 ? Math.round(1000 * Math.sqrt(variance) / mean) : 0};
+};
 
 /**
  * Make a random page-view id.
@@ -76,7 +111,18 @@ export const init = (cmid, artifacts) => {
         clickswithoutmove: 0,
         pastes: 0,
         pastedchars: 0,
+        centreclicks: 0,
+        measuredclicks: 0,
+        keyintervals: 0,
+        keymedian: 0,
+        keycv: 0,
+        firstinputms: -1,
+        pointermoves: 0,
+        scrolls: 0,
     };
+    const started = performance.now();
+    const keygaps = [];
+    let lastTypedKey = 0;
     const matched = new Set();
     let lastKey = 0;
     let lastMove = 0;
@@ -85,21 +131,52 @@ export const init = (cmid, artifacts) => {
     const keyed = () => {
         lastKey = Date.now();
     };
-    document.addEventListener('keydown', keyed, true);
+    const firstInput = () => {
+        if (summary.firstinputms < 0) {
+            summary.firstinputms = Math.round(performance.now() - started);
+            dirty = true;
+        }
+    };
+    document.addEventListener('keydown', (e) => {
+        keyed();
+        if (e.key && e.key.length === 1 && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            const now = performance.now();
+            if (lastTypedKey && now - lastTypedKey <= MAX_KEY_GAP) {
+                keygaps.push(now - lastTypedKey);
+                if (keygaps.length > MAX_KEY_GAPS) {
+                    keygaps.shift();
+                }
+                summary.keyintervals++;
+                dirty = true;
+            }
+            lastTypedKey = now;
+        }
+    }, true);
     document.addEventListener('compositionstart', keyed, true);
     document.addEventListener('compositionupdate', keyed, true);
 
     const moved = () => {
         lastMove = Date.now();
     };
-    document.addEventListener('pointermove', moved, {capture: true, passive: true});
+    document.addEventListener('pointermove', () => {
+        moved();
+        summary.pointermoves++;
+    }, {capture: true, passive: true});
     document.addEventListener('pointerdown', moved, {capture: true, passive: true});
+    const scrolled = () => {
+        summary.scrolls++;
+    };
+    document.addEventListener('scroll', scrolled, {capture: true, passive: true});
+    document.addEventListener('wheel', scrolled, {capture: true, passive: true});
 
     document.addEventListener('input', (e) => {
         if (isTextField(e.target) && e.inputType !== 'insertFromPaste' && e.inputType !== 'insertFromDrop' &&
                 Date.now() - lastKey > RECENT) {
             summary.textwithoutkeys++;
             dirty = true;
+        }
+        if (isTextField(e.target)) {
+            firstInput();
         }
     }, true);
 
@@ -111,6 +188,25 @@ export const init = (cmid, artifacts) => {
         summary.clicks++;
         if (Date.now() - lastMove > RECENT) {
             summary.clickswithoutmove++;
+        }
+        firstInput();
+        // How close to the centre of the control the click landed. Tiny controls are skipped: any click on them
+        // is near the centre.
+        const control = e.target instanceof Element ? (e.target.closest(CONTROLS) || e.target) : null;
+        if (control) {
+            const box = control.getBoundingClientRect();
+            if (box.width >= 16 && box.height >= 12) {
+                summary.measuredclicks++;
+                // Browsers report whole-pixel coordinates, so allow the rounding: within the larger of CENTRE of
+                // the half-size and PIXEL_SLACK pixels, on each axis.
+                const rx = Math.max(PIXEL_SLACK, CENTRE * box.width / 2);
+                const ry = Math.max(PIXEL_SLACK, CENTRE * box.height / 2);
+                const dx = (e.clientX - (box.left + box.width / 2)) / rx;
+                const dy = (e.clientY - (box.top + box.height / 2)) / ry;
+                if (dx * dx + dy * dy <= 1) {
+                    summary.centreclicks++;
+                }
+            }
         }
         dirty = true;
     }, true);
@@ -143,6 +239,9 @@ export const init = (cmid, artifacts) => {
             return;
         }
         dirty = false;
+        const typing = rhythm(keygaps);
+        summary.keymedian = typing.median;
+        summary.keycv = typing.cv;
         Ajax.call([{
             methodname: 'local_nomoreai_record_pageview',
             args: Object.assign({cmid: cmid, pageview: pageview, artifacts: Array.from(matched)}, summary),

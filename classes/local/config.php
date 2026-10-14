@@ -55,6 +55,12 @@ class config {
             'artifacts' => "claude|#claude-agent-stop-container, style#claude-agent-animation-styles",
             'fastfraction' => '0.25',
             'retentiondays' => 90,
+            'centreratio' => '0.6',
+            'centreminclicks' => 5,
+            'keymedianms' => 30,
+            'keycv' => '0.15',
+            'keyminintervals' => 20,
+            'instantms' => 500,
         ];
     }
 

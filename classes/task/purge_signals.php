@@ -40,5 +40,6 @@ class purge_signals extends \core\task\scheduled_task {
      */
     public function execute(): void {
         \local_nomoreai\local\signals::purge_expired();
+        \local_nomoreai\local\metrics::purge_expired();
     }
 }

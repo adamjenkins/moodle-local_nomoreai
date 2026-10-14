@@ -43,8 +43,14 @@ Settings: Site administration > Plugins > Local plugins > No More AI.
 - **Refuse identified agents** (on), with editable lists of agent user-agent tokens and IP addresses.
 - **Notice** (on): a visible notice at the top of activity pages in Enforce, addressed to people and agents.
 - **Browser monitoring** (off): counts automation flags, known agents' page traces, text entered without key
-  presses, clicks without pointer movement and large pastes, and records signals. Only counts are sent, never
-  what was typed. A sentence tells students while it runs. Consult your data protection officer first.
+  presses, clicks without pointer movement, clicks that land dead centre on their button (as automation does),
+  machine-like typing (too fast, or too evenly spaced), reactions faster than a person can manage, and large
+  pastes, and records signals. Only counts and summary numbers are sent (for typing, a median gap and how much
+  the gaps vary), never what was typed, individual key timings or pointer paths. A sentence tells students while
+  it runs. Consult your data protection officer first: typing rhythm is a form of keystroke dynamics.
+- **Behavioural thresholds**: the dead-centre click share, fastest human typing, most even human typing and
+  fastest human reaction are settings. Tune them with the **Calibration** report tab (below) while in Detect
+  only mode.
 - **Fast quiz attempt** and **retention** (90 days).
 
 Each activity's settings have a **Web browser only** option. When it is on, the activity cannot be used
@@ -66,6 +72,8 @@ through any web-service token in Enforce, not even for reading.
   - **Courses and activities**: where the most signals were seen, and by how many users.
   - **Signal types**: totals, refusals, users and activities per signal, what else can cause each one, and
     counts per week for the last 12 weeks.
+  - **Calibration**: how this site's monitored page views spread on each behavioural measure (percentiles),
+    and how many each current threshold would flag, so you can set thresholds that fit your students.
   - **Identified agents**: each agent that identified itself (signed agent name, agent user agent or listed
     IP address), the users it acted as and where it was seen, including the login page.
 
@@ -80,6 +88,9 @@ through any web-service token in Enforce, not even for reading.
 Signals are stored per user with the activity, kind of signal and a few counts. They are covered by the
 privacy API (export and deletion) and deleted after the retention period, on course reset and on course or
 activity deletion.
+
+For calibration, each monitored page view's measurements (click, typing and timing counts) are also kept
+**without any user id**, with the same retention and clean-up.
 
 ## Licence
 

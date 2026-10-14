@@ -41,6 +41,8 @@ class reports {
     public const TAB_TYPES = 'types';
     /** @var string Tab: agents that identified themselves. */
     public const TAB_AGENTS = 'agents';
+    /** @var string Tab: calibration of the behavioural thresholds. */
+    public const TAB_CALIBRATION = 'calibration';
 
     /** @var int Most rows shown in one table. */
     public const MAXROWS = 200;
@@ -80,7 +82,7 @@ class reports {
      * @return string[]
      */
     public static function tabs(): array {
-        return [self::TAB_USERS, self::TAB_ACTIVITIES, self::TAB_TYPES, self::TAB_AGENTS];
+        return [self::TAB_USERS, self::TAB_ACTIVITIES, self::TAB_TYPES, self::TAB_AGENTS, self::TAB_CALIBRATION];
     }
 
     /**
@@ -128,6 +130,8 @@ class reports {
                 return $html . $this->types();
             case self::TAB_AGENTS:
                 return $html . $this->agents();
+            case self::TAB_CALIBRATION:
+                return $html . $this->calibration();
             default:
                 return $html . $this->users();
         }
@@ -429,6 +433,77 @@ class reports {
             );
         }
         return $html;
+    }
+
+    /**
+     * Calibration: how the behavioural measures are spread over this site's monitored page views, and how many
+     * of them the current thresholds would flag.
+     *
+     * @return string HTML
+     */
+    public function calibration(): string {
+        global $OUTPUT;
+        $measures = metrics::calibration($this->course ? (int) $this->course->id : 0, $this->cmid);
+        if (!array_sum(array_column($measures, 'count'))) {
+            return $OUTPUT->notification(
+                get_string('calibration_nodata', 'local_nomoreai'),
+                \core\output\notification::NOTIFY_INFO,
+                false
+            );
+        }
+        $percentiles = [5, 25, 50, 75, 95];
+        $table = $this->table(array_merge(
+            [get_string('calibration_measure', 'local_nomoreai'), get_string('calibration_pageviews', 'local_nomoreai')],
+            array_map(fn($p) => get_string('calibration_percentile', 'local_nomoreai', $p), $percentiles),
+            [get_string('calibration_threshold', 'local_nomoreai'), get_string('calibration_flagged', 'local_nomoreai')]
+        ));
+        foreach ($measures as $measure) {
+            $line = [
+                html_writer::tag('strong', s(get_string('calibration_' . $measure['name'], 'local_nomoreai'))) .
+                    html_writer::div(
+                        s(get_string('calibration_' . $measure['name'] . '_help', 'local_nomoreai')),
+                        'small text-muted'
+                    ),
+                $measure['count'],
+            ];
+            foreach ($percentiles as $p) {
+                $line[] = $this->format_measure($measure['percentiles'][$p], $measure['unit']);
+            }
+            $line[] = s(get_string(
+                'calibration_' . $measure['direction'],
+                'local_nomoreai',
+                $this->format_measure($measure['threshold'], $measure['unit'])
+            ));
+            $line[] = $measure['count'] ? $measure['flagged'] . ' (' .
+                format_float(100 * $measure['flagged'] / $measure['count'], 1) . '%)' : '-';
+            $table->data[] = $line;
+        }
+        return html_writer::table($table) . html_writer::tag(
+            'p',
+            s(get_string('calibration_advice', 'local_nomoreai')),
+            ['class' => 'text-muted']
+        );
+    }
+
+    /**
+     * A measure's value for display.
+     *
+     * @param float|int|null $value
+     * @param string $unit share, ratio or ms
+     * @return string plain text
+     */
+    protected function format_measure($value, string $unit): string {
+        if ($value === null) {
+            return '-';
+        }
+        switch ($unit) {
+            case 'share':
+                return format_float(100 * $value, 0) . '%';
+            case 'ratio':
+                return format_float($value, 2);
+            default:
+                return get_string('calibration_ms', 'local_nomoreai', (int) round($value));
+        }
     }
 
     /**

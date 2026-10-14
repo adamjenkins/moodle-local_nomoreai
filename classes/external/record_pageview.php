@@ -23,6 +23,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_nomoreai\local\config;
 use local_nomoreai\local\exemption;
+use local_nomoreai\local\metrics;
 use local_nomoreai\local\pageview;
 
 /**
@@ -57,6 +58,20 @@ class record_pageview extends external_api {
             'clickswithoutmove' => new external_value(PARAM_INT, 'Clicks with no pointer movement just before'),
             'pastes' => new external_value(PARAM_INT, 'Paste events'),
             'pastedchars' => new external_value(PARAM_INT, 'Characters pasted'),
+            // Added later: optional, so a page still running the previous monitor script keeps working.
+            'measuredclicks' => new external_value(PARAM_INT, 'Clicks on a control big enough to measure', VALUE_DEFAULT, 0),
+            'centreclicks' => new external_value(PARAM_INT, 'Measured clicks that landed dead centre', VALUE_DEFAULT, 0),
+            'keyintervals' => new external_value(PARAM_INT, 'Gaps between typed keys measured', VALUE_DEFAULT, 0),
+            'keymedian' => new external_value(PARAM_INT, 'Median gap between typed keys, ms', VALUE_DEFAULT, 0),
+            'keycv' => new external_value(PARAM_INT, 'Variation of the key gaps, thousandths', VALUE_DEFAULT, 0),
+            'firstinputms' => new external_value(
+                PARAM_INT,
+                'Ms from page ready to the first click or answer, -1 for none',
+                VALUE_DEFAULT,
+                -1
+            ),
+            'pointermoves' => new external_value(PARAM_INT, 'Pointer movements', VALUE_DEFAULT, 0),
+            'scrolls' => new external_value(PARAM_INT, 'Scroll and wheel events', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -72,6 +87,14 @@ class record_pageview extends external_api {
      * @param int $clickswithoutmove
      * @param int $pastes
      * @param int $pastedchars
+     * @param int $measuredclicks
+     * @param int $centreclicks
+     * @param int $keyintervals
+     * @param int $keymedian
+     * @param int $keycv
+     * @param int $firstinputms
+     * @param int $pointermoves
+     * @param int $scrolls
      * @return array
      */
     public static function execute(
@@ -83,7 +106,15 @@ class record_pageview extends external_api {
         int $clicks,
         int $clickswithoutmove,
         int $pastes,
-        int $pastedchars
+        int $pastedchars,
+        int $measuredclicks = 0,
+        int $centreclicks = 0,
+        int $keyintervals = 0,
+        int $keymedian = 0,
+        int $keycv = 0,
+        int $firstinputms = -1,
+        int $pointermoves = 0,
+        int $scrolls = 0
     ): array {
         $params = self::validate_parameters(self::execute_parameters(), compact(
             'cmid',
@@ -94,7 +125,15 @@ class record_pageview extends external_api {
             'clicks',
             'clickswithoutmove',
             'pastes',
-            'pastedchars'
+            'pastedchars',
+            'measuredclicks',
+            'centreclicks',
+            'keyintervals',
+            'keymedian',
+            'keycv',
+            'firstinputms',
+            'pointermoves',
+            'scrolls'
         ));
 
         $context = \context_module::instance($params['cmid']);
@@ -111,11 +150,18 @@ class record_pageview extends external_api {
         }
 
         $summary = ['webdriver' => $params['webdriver'], 'artifacts' => array_slice($params['artifacts'], 0, 10)];
-        foreach (['textwithoutkeys', 'clicks', 'clickswithoutmove', 'pastes', 'pastedchars'] as $name) {
+        foreach (
+            ['textwithoutkeys', 'clicks', 'clickswithoutmove', 'pastes', 'pastedchars', 'measuredclicks', 'centreclicks',
+                'keyintervals', 'keymedian', 'keycv', 'pointermoves', 'scrolls'] as $name
+        ) {
             $summary[$name] = max(0, min(self::MAXCOUNT, $params[$name]));
         }
         $summary['clickswithoutmove'] = min($summary['clickswithoutmove'], $summary['clicks']);
+        $summary['measuredclicks'] = min($summary['measuredclicks'], $summary['clicks']);
+        $summary['centreclicks'] = min($summary['centreclicks'], $summary['measuredclicks']);
+        $summary['firstinputms'] = $params['firstinputms'] < 0 ? -1 : min(self::MAXCOUNT, $params['firstinputms']);
 
+        metrics::save($context, $params['pageview'], $summary);
         return ['recorded' => pageview::evaluate($context, $summary)];
     }
 

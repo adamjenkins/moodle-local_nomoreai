@@ -37,6 +37,60 @@ class pageview {
     public const MIN_PASTED = 500;
 
     /**
+     * Share of measured clicks landing dead centre that records a signal.
+     *
+     * @return float
+     */
+    public static function centre_ratio(): float {
+        return min(1.0, max(0.0, (float) config::get('centreratio')));
+    }
+
+    /**
+     * Measured clicks needed before the centre share is judged.
+     *
+     * @return int
+     */
+    public static function min_centre_clicks(): int {
+        return max(1, (int) config::get('centreminclicks'));
+    }
+
+    /**
+     * Median gap between typed keys (ms) below which typing counts as machine-like.
+     *
+     * @return int
+     */
+    public static function key_median_ms(): int {
+        return max(0, (int) config::get('keymedianms'));
+    }
+
+    /**
+     * Variation of the key gaps (standard deviation / mean) below which typing counts as machine-like.
+     *
+     * @return float
+     */
+    public static function key_cv(): float {
+        return max(0.0, (float) config::get('keycv'));
+    }
+
+    /**
+     * Key gaps needed before the typing rhythm is judged.
+     *
+     * @return int
+     */
+    public static function min_key_intervals(): int {
+        return max(2, (int) config::get('keyminintervals'));
+    }
+
+    /**
+     * Time from the page being ready to the first click or answer (ms) below which it counts as instant.
+     *
+     * @return int
+     */
+    public static function instant_ms(): int {
+        return max(0, (int) config::get('instantms'));
+    }
+
+    /**
      * The configured agent DOM signatures.
      *
      * @return array id => CSS selector list
@@ -82,6 +136,21 @@ class pageview {
         }
         if (($summary['pastedchars'] ?? 0) >= self::MIN_PASTED) {
             $found[signals::PASTE] = ['pastes' => (int) ($summary['pastes'] ?? 0), 'chars' => (int) $summary['pastedchars']];
+        }
+        $measured = (int) ($summary['measuredclicks'] ?? 0);
+        $centre = (int) ($summary['centreclicks'] ?? 0);
+        if ($measured >= self::min_centre_clicks() && $centre / $measured >= self::centre_ratio()) {
+            $found[signals::CENTRE_CLICKS] = ['measured' => $measured, 'centre' => $centre];
+        }
+        $intervals = (int) ($summary['keyintervals'] ?? 0);
+        $median = (int) ($summary['keymedian'] ?? 0);
+        $cv = ((int) ($summary['keycv'] ?? 0)) / 1000;
+        if ($intervals >= self::min_key_intervals() && ($median < self::key_median_ms() || $cv < self::key_cv())) {
+            $found[signals::MACHINE_TYPING] = ['intervals' => $intervals, 'medianms' => $median, 'cv' => round($cv, 3)];
+        }
+        $first = (int) ($summary['firstinputms'] ?? -1);
+        if ($first >= 0 && $first < self::instant_ms()) {
+            $found[signals::INSTANT] = ['ms' => $first];
         }
 
         // Record each signal once per user, activity and day: the page-view id comes from the client, so it must

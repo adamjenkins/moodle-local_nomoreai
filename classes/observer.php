@@ -18,6 +18,7 @@ namespace local_nomoreai;
 
 use local_nomoreai\local\config;
 use local_nomoreai\local\exemption;
+use local_nomoreai\local\metrics;
 use local_nomoreai\local\quiz_analyser;
 use local_nomoreai\local\signals;
 use local_nomoreai\local\webonly;
@@ -80,6 +81,7 @@ class observer {
         global $DB;
         webonly::delete((int) $event->objectid);
         $DB->delete_records(signals::TABLE, ['cmid' => $event->objectid]);
+        $DB->delete_records(metrics::TABLE, ['cmid' => $event->objectid]);
     }
 
     /**
@@ -91,6 +93,7 @@ class observer {
     public static function course_deleted(\core\event\course_deleted $event): void {
         global $DB;
         $DB->delete_records(signals::TABLE, ['courseid' => $event->objectid]);
+        $DB->delete_records(metrics::TABLE, ['courseid' => $event->objectid]);
     }
 
     /**
@@ -102,5 +105,6 @@ class observer {
     public static function course_reset_ended(\core\event\course_reset_ended $event): void {
         global $DB;
         $DB->delete_records(signals::TABLE, ['courseid' => $event->courseid]);
+        $DB->delete_records(metrics::TABLE, ['courseid' => $event->courseid]);
     }
 }
