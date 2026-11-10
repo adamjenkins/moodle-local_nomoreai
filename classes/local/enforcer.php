@@ -39,6 +39,9 @@ class enforcer {
     /** @var bool Tests only: treat the request as a web-service (token) request. */
     public static $forcews = false;
 
+    /** @var int Most login-page signals (nobody logged in) recorded site-wide in one clock hour. */
+    public const LOGIN_SIGNALS_PER_HOUR = 500;
+
     /**
      * Forget the request state (tests).
      *
@@ -146,11 +149,30 @@ class enforcer {
             return;
         }
         if ($hit = agent_detector::detect()) {
-            // Nobody is logged in here, so record each client at most once an hour per address (hashed, so no
-            // address is stored); otherwise anyone could grow the table without limit.
-            $key = 'l' . date('YmdH') . substr(sha1($hit['client'] . '|' . getremoteaddr()), 0, 21);
-            self::act($hit['signal'], null, ['client' => $hit['client']], $key);
+            // Nobody is logged in here, so record each signal type at most once an hour per address (hashed, so
+            // no address is stored), and no more than LOGIN_SIGNALS_PER_HOUR in all; otherwise anyone could grow
+            // the table without limit. The client name comes from a request header, so it is kept out of the key:
+            // varying it must not give a new row.
+            $key = 'l' . date('YmdH') . substr(sha1($hit['signal'] . '|' . getremoteaddr()), 0, 21);
+            self::act($hit['signal'], null, ['client' => $hit['client']], $key, !self::login_cap_reached());
         }
+    }
+
+    /**
+     * Whether this hour's login-page signals have reached LOGIN_SIGNALS_PER_HOUR.
+     *
+     * @param int|null $now
+     * @return bool
+     */
+    public static function login_cap_reached(?int $now = null): bool {
+        global $DB;
+        $now = $now ?? time();
+        $hourstart = $now - ($now % HOURSECS);
+        return $DB->count_records_select(
+            signals::TABLE,
+            "userid = 0 AND origin = 'login' AND timecreated >= ?",
+            [$hourstart]
+        ) >= self::LOGIN_SIGNALS_PER_HOUR;
     }
 
     /**
@@ -267,12 +289,21 @@ class enforcer {
      * @param \context|null $context
      * @param array $detail
      * @param string|null $dedupe record at most once per this key (per user and type)
+     * @param bool $record false to refuse (in Enforce) without recording, when a recording cap is reached
      * @return void
      * @throws \moodle_exception in Enforce
      */
-    private static function act(string $type, ?\context $context, array $detail, ?string $dedupe = null): void {
+    private static function act(
+        string $type,
+        ?\context $context,
+        array $detail,
+        ?string $dedupe = null,
+        bool $record = true
+    ): void {
         $enforce = config::enforcing();
-        signals::record($type, $context, $detail, $enforce, null, $dedupe);
+        if ($record) {
+            signals::record($type, $context, $detail, $enforce, null, $dedupe);
+        }
         if (!$enforce) {
             return;
         }

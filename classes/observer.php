@@ -85,7 +85,10 @@ class observer {
     }
 
     /**
-     * Course deleted: forget its signals.
+     * Course deleted: forget its signals, measurements and activity settings.
+     *
+     * Core deletes a course's activities without raising course_module_deleted, so their settings are found as
+     * the rows whose activity no longer exists.
      *
      * @param \core\event\course_deleted $event
      * @return void
@@ -94,6 +97,7 @@ class observer {
         global $DB;
         $DB->delete_records(signals::TABLE, ['courseid' => $event->objectid]);
         $DB->delete_records(metrics::TABLE, ['courseid' => $event->objectid]);
+        $DB->delete_records_select(webonly::TABLE, 'cmid NOT IN (SELECT id FROM {course_modules})');
     }
 
     /**

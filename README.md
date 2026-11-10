@@ -79,9 +79,13 @@ through any web-service token in Enforce, not even for reading.
 
   Every user, course and activity is linked: users to their profile in that course (their site profile for
   site-level signals), courses to the course and activities to the activity. Signals are indicators, not proof.
-- **Web service token audit** (Site administration > Plugins > Local plugins): web-service tokens, and from
-  Moodle 5.3 personal access tokens, held by users who are not exempt, with a purge button. Moodle keeps using an existing token without re-checking permissions, so
-  removing a permission does not cut off a student who already holds one.
+  In a course or activity with separate groups, a teacher without `moodle/site:accessallgroups` sees only the
+  signals of their own groups' members (the anonymous Calibration figures are not split by group).
+- **Web service token audit** (Site administration > Plugins > Local plugins, `local/nomoreai:viewdashboard`):
+  web-service tokens, and from Moodle 5.3 personal access tokens, held by users who are not exempt. The purge
+  button needs `local/nomoreai:purgetokens` (managers by default; it carries a data-loss risk). Moodle keeps
+  using an existing token without re-checking permissions, so removing a permission does not cut off a student
+  who already holds one.
 
 ## Privacy
 
@@ -90,7 +94,7 @@ privacy API (export and deletion) and deleted after the retention period, on cou
 activity deletion.
 
 For calibration, each monitored page view's measurements (click, typing and timing counts) are also kept
-**without any user id**, with the same retention and clean-up.
+**without any user id**, with the same retention and clean-up. At most 300 are stored per user and day.
 
 ## Licence
 

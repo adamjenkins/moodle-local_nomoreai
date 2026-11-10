@@ -152,6 +152,35 @@ final class behaviour_test extends \advanced_testcase {
         $this->assertEquals(0, $DB->count_records(metrics::TABLE));
     }
 
+    public function test_daily_cap_holds_across_sessions(): void {
+        global $DB, $SESSION;
+        $this->setUser($this->student);
+        // A fresh session, but the user already created the day's maximum.
+        $SESSION->local_nomoreai_metricrows = 0;
+        \cache::make('local_nomoreai', 'metricrows')->set(
+            metrics::user_day_key((int) $this->student->id),
+            metrics::MAX_PER_USER_DAY
+        );
+        $this->send(str_repeat('j', 24), ['clicks' => 3]);
+        $this->assertEquals(0, $DB->count_records(metrics::TABLE));
+
+        // Another user is not affected.
+        $other = $this->getDataGenerator()->create_and_enrol($this->course, 'student');
+        $this->setUser($other);
+        $SESSION->local_nomoreai_metricrows = 0;
+        $this->send(str_repeat('k', 24), ['clicks' => 3]);
+        $this->assertEquals(1, $DB->count_records(metrics::TABLE));
+    }
+
+    public function test_count_user_row_stops_at_the_daily_limit(): void {
+        $now = time();
+        \cache::make('local_nomoreai', 'metricrows')->set(metrics::user_day_key(5, $now), metrics::MAX_PER_USER_DAY - 1);
+        $this->assertTrue(metrics::count_user_row(5, $now));
+        $this->assertFalse(metrics::count_user_row(5, $now));
+        // The next day starts again.
+        $this->assertTrue(metrics::count_user_row(5, $now + DAYSECS));
+    }
+
     public function test_calibration_spread_and_flagged_count(): void {
         $context = \context_module::instance($this->forum->cmid);
         foreach ([10, 20, 30, 40, 900] as $i => $first) {

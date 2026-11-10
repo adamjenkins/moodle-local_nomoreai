@@ -32,8 +32,10 @@ $confirm = optional_param('confirm', 0, PARAM_BOOL);
 
 admin_externalpage_setup('local_nomoreai_tokens');
 $pageurl = new moodle_url('/local/nomoreai/tokens.php');
+$canpurge = has_capability('local/nomoreai:purgetokens', context_system::instance());
 
 if ($action === 'purge') {
+    require_capability('local/nomoreai:purgetokens', context_system::instance());
     if ($confirm && confirm_sesskey()) {
         $count = tokens::purge_nonexempt();
         redirect(
@@ -77,11 +79,13 @@ if (!$list) {
         ];
     }
     echo html_writer::table($table);
-    echo $OUTPUT->single_button(
-        new moodle_url($pageurl, ['action' => 'purge']),
-        get_string('purgetokens', 'local_nomoreai'),
-        'get'
-    );
+    if ($canpurge) {
+        echo $OUTPUT->single_button(
+            new moodle_url($pageurl, ['action' => 'purge']),
+            get_string('purgetokens', 'local_nomoreai'),
+            'get'
+        );
+    }
 }
 
 echo $OUTPUT->footer();

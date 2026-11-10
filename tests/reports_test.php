@@ -116,6 +116,49 @@ final class reports_test extends \advanced_testcase {
         $this->assertStringContainsString('href="' . $profile . '"', $html);
     }
 
+    public function test_separate_groups_limit_what_a_non_editing_teacher_sees(): void {
+        $gen = $this->getDataGenerator();
+        $course = $gen->create_course(['fullname' => 'Grouped', 'summary' => '', 'groupmode' => SEPARATEGROUPS,
+            'groupmodeforce' => 1]);
+        $teacher = $gen->create_and_enrol($course, 'teacher');
+        $editor = $gen->create_and_enrol($course, 'editingteacher');
+        $mine = $gen->create_user(['firstname' => 'Mina', 'lastname' => 'Mine']);
+        $theirs = $gen->create_user(['firstname' => 'Theo', 'lastname' => 'Theirs']);
+        $gen->enrol_user($mine->id, $course->id, 'student');
+        $gen->enrol_user($theirs->id, $course->id, 'student');
+        $g1 = $gen->create_group(['courseid' => $course->id]);
+        $g2 = $gen->create_group(['courseid' => $course->id]);
+        $gen->create_group_member(['groupid' => $g1->id, 'userid' => $teacher->id]);
+        $gen->create_group_member(['groupid' => $g1->id, 'userid' => $mine->id]);
+        $gen->create_group_member(['groupid' => $g2->id, 'userid' => $theirs->id]);
+        $context = \context_course::instance($course->id);
+        signals::record(signals::AGENT_UA, $context, ['client' => 'MineBot'], false, $mine->id);
+        signals::record(signals::AGENT_UA, $context, ['client' => 'TheirBot'], false, $theirs->id);
+
+        $visible = reports::visible_userids($course, 0, (int) $teacher->id);
+        $this->assertContains((int) $mine->id, $visible);
+        $this->assertNotContains((int) $theirs->id, $visible);
+        $this->assertNull(reports::visible_userids($course, 0, (int) $editor->id));
+
+        $reports = new reports($course, 0, $visible);
+        foreach ([reports::TAB_USERS, reports::TAB_AGENTS] as $tab) {
+            $html = $reports->render($tab);
+            $this->assertStringContainsString('Mina Mine', $html, $tab);
+            $this->assertStringNotContainsString('Theo Theirs', $html, $tab);
+            $this->assertStringNotContainsString('TheirBot', $html, $tab);
+        }
+
+        // A teacher in no group sees nobody.
+        $loner = $gen->create_and_enrol($course, 'teacher');
+        $this->assertSame([], reports::visible_userids($course, 0, (int) $loner->id));
+        $html = (new reports($course, 0, []))->render(reports::TAB_USERS);
+        $this->assertStringContainsString(get_string('nosignals', 'local_nomoreai'), $html);
+
+        // Without separate groups everyone is shown.
+        $open = $gen->create_course(['summary' => '']);
+        $this->assertNull(reports::visible_userids($open, 0, (int) $teacher->id));
+    }
+
     public function test_course_scope_excludes_other_courses(): void {
         $reports = new reports($this->course1);
         foreach (reports::tabs() as $tab) {

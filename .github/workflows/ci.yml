@@ -38,7 +38,7 @@ jobs:
       matrix:
         database: [pgsql, mariadb]
         # Blocking: Moodle 5.2, at its lowest and highest supported PHP (core's own
-        # .github/workflows/push.yml on MOODLE_502_STABLE: 8.3-8.4). supported = [502, 502];
+        # .github/workflows/push.yml on MOODLE_502_STABLE: 8.3-8.4). supported = [502, 503];
         # the MOODLE_503_STABLE rows below are blocking too.
         moodle:
           - {branch: 'MOODLE_502_STABLE', php: '8.3'}

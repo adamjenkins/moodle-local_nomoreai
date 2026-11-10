@@ -113,6 +113,29 @@ final class detection_test extends \advanced_testcase {
         $this->assertTrue($DB->record_exists('external_tokens', ['userid' => $teacher->id]));
     }
 
+    public function test_purge_needs_its_own_data_loss_capability(): void {
+        global $DB;
+        $info = get_capability_info('local/nomoreai:purgetokens');
+        $this->assertNotEmpty($info);
+        $this->assertSame(RISK_DATALOSS, $info->riskbitmask & RISK_DATALOSS);
+        $this->assertSame(0, get_capability_info('local/nomoreai:viewdashboard')->riskbitmask & RISK_DATALOSS);
+
+        // A role given only the dashboard capability cannot purge.
+        $viewer = $this->getDataGenerator()->create_user();
+        $roleid = $this->getDataGenerator()->create_role();
+        $system = \context_system::instance();
+        assign_capability('local/nomoreai:viewdashboard', CAP_ALLOW, $roleid, $system->id);
+        role_assign($roleid, $viewer->id, $system->id);
+        accesslib_clear_all_caches_for_unit_testing();
+        $this->assertTrue(has_capability('local/nomoreai:viewdashboard', $system, $viewer));
+        $this->assertFalse(has_capability('local/nomoreai:purgetokens', $system, $viewer));
+
+        // Managers have it by default.
+        $manager = $this->getDataGenerator()->create_user();
+        role_assign($DB->get_field('role', 'id', ['shortname' => 'manager']), $manager->id, $system->id);
+        $this->assertTrue(has_capability('local/nomoreai:purgetokens', $system, $manager));
+    }
+
     public function test_audit_and_purge_cover_personal_access_tokens(): void {
         global $DB;
         if (!tokens::personal_tokens_supported()) {

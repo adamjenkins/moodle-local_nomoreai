@@ -56,7 +56,8 @@ $PAGE->set_pagelayout('report');
 $PAGE->set_title(get_string('report', 'local_nomoreai'));
 $PAGE->set_heading(format_string($course->fullname, true, ['context' => $context]));
 
-$reports = new reports($course, $cmid);
+// Separate groups: a teacher who cannot access all groups sees only the members of their own groups.
+$reports = new reports($course, $cmid, reports::visible_userids($course, $cmid, (int) $USER->id));
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('report', 'local_nomoreai'));

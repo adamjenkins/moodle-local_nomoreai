@@ -61,4 +61,13 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
+    // Deletes the self-created tokens of every user who is not exempt, from the token audit page.
+    'local/nomoreai:purgetokens' => [
+        'riskbitmask' => RISK_DATALOSS | RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+    ],
 ];

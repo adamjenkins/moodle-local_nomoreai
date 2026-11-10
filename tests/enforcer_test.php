@@ -272,6 +272,57 @@ final class enforcer_test extends \advanced_testcase {
         $this->assertSame('https://chatgpt.com', json_decode($record->detail)->client);
     }
 
+    public function test_login_page_varying_client_from_one_address_records_once(): void {
+        global $DB, $SCRIPT;
+        set_config('mode', 'detect', 'local_nomoreai');
+        $old = $SCRIPT;
+        $SCRIPT = '/login/index.php';
+        $_SERVER['REMOTE_ADDR'] = '203.0.113.7';
+        try {
+            $_SERVER['HTTP_SIGNATURE_AGENT'] = '"https://agent-one.example"';
+            enforcer::after_config();
+            $_SERVER['HTTP_SIGNATURE_AGENT'] = '"https://agent-two.example"';
+            enforcer::after_config();
+            $this->assertEquals(1, $DB->count_records(signals::TABLE, ['signaltype' => signals::SIGNED_AGENT]));
+
+            // Another address is recorded separately.
+            $_SERVER['REMOTE_ADDR'] = '203.0.113.8';
+            enforcer::after_config();
+            $this->assertEquals(2, $DB->count_records(signals::TABLE, ['signaltype' => signals::SIGNED_AGENT]));
+        } finally {
+            $SCRIPT = $old;
+        }
+    }
+
+    public function test_login_page_signals_stop_at_the_hourly_cap_but_still_refuse(): void {
+        global $DB, $SCRIPT;
+        $now = time();
+        $rows = [];
+        for ($i = 0; $i < enforcer::LOGIN_SIGNALS_PER_HOUR; $i++) {
+            $rows[] = ['userid' => 0, 'contextid' => \context_system::instance()->id, 'courseid' => 0, 'cmid' => 0,
+                'signaltype' => signals::SIGNED_AGENT, 'detail' => null, 'mode' => 'detect', 'outcome' => 'recorded',
+                'origin' => 'login', 'pageview' => 'cap' . $i, 'timecreated' => $now];
+        }
+        $DB->insert_records(signals::TABLE, $rows);
+        $this->assertTrue(enforcer::login_cap_reached($now));
+        $this->assertFalse(enforcer::login_cap_reached($now + HOURSECS));
+
+        set_config('mode', 'enforce', 'local_nomoreai');
+        $old = $SCRIPT;
+        $SCRIPT = '/login/index.php';
+        $_SERVER['REMOTE_ADDR'] = '203.0.113.9';
+        $_SERVER['HTTP_SIGNATURE_AGENT'] = '"https://chatgpt.com"';
+        try {
+            enforcer::after_config();
+            $this->fail('Expected a refusal');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('refused', $e->errorcode);
+        } finally {
+            $SCRIPT = $old;
+        }
+        $this->assertEquals(enforcer::LOGIN_SIGNALS_PER_HOUR, $DB->count_records(signals::TABLE));
+    }
+
     public function test_detect_records_agent_once_per_day(): void {
         set_config('mode', 'detect', 'local_nomoreai');
         $this->setUser($this->student);

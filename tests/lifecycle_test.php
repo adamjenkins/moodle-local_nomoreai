@@ -125,4 +125,20 @@ final class lifecycle_test extends \core_privacy\tests\provider_testcase {
         delete_course($course, false);
         $this->assertEquals(0, $DB->count_records(signals::TABLE, ['courseid' => $course->id]));
     }
+
+    public function test_course_delete_removes_webonly_settings_of_its_activities(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $gen = $this->getDataGenerator();
+        $course = $gen->create_course(['summary' => '']);
+        $other = $gen->create_course(['summary' => '']);
+        $quiz = $gen->create_module('quiz', ['course' => $course->id]);
+        $keep = $gen->create_module('quiz', ['course' => $other->id]);
+        webonly::set((int) $quiz->cmid, true);
+        webonly::set((int) $keep->cmid, true);
+
+        delete_course($course, false);
+        $this->assertFalse($DB->record_exists(webonly::TABLE, ['cmid' => $quiz->cmid]));
+        $this->assertTrue(webonly::is_webonly((int) $keep->cmid));
+    }
 }

@@ -62,15 +62,20 @@ class reports {
     /** @var array User records by id, loaded on demand (false for a deleted user). */
     protected $users = [];
 
+    /** @var int[]|null Users whose signals may be shown (separate groups), null for everyone. */
+    protected $userids = null;
+
     /**
      * Constructor.
      *
      * @param \stdClass|null $course the course in scope, null for the whole site
      * @param int $cmid activity in scope, 0 for all (only with a course)
+     * @param int[]|null $userids users whose signals may be shown, null for everyone (see visible_userids())
      */
-    public function __construct(?\stdClass $course = null, int $cmid = 0) {
+    public function __construct(?\stdClass $course = null, int $cmid = 0, ?array $userids = null) {
         $this->course = $course;
         $this->cmid = $course ? $cmid : 0;
+        $this->userids = $course && $userids !== null ? array_values(array_unique(array_map('intval', $userids))) : null;
         if ($course) {
             $this->courses[(int) $course->id] = $course;
         }
@@ -512,6 +517,7 @@ class reports {
      * @return array [sql, params]
      */
     protected function where(): array {
+        global $DB;
         if (!$this->course) {
             return ['1 = 1', []];
         }
@@ -521,7 +527,49 @@ class reports {
             $where .= ' AND cmid = :scopecmid';
             $params['scopecmid'] = $this->cmid;
         }
+        if ($this->userids !== null) {
+            if (!$this->userids) {
+                return [$where . ' AND 1 = 0', $params];
+            }
+            [$insql, $inparams] = $DB->get_in_or_equal($this->userids, SQL_PARAMS_NAMED, 'scopeuser');
+            $where .= " AND userid $insql";
+            $params += $inparams;
+        }
         return [$where, $params];
+    }
+
+    /**
+     * The users whose signals a viewer may see in a course report, following separate groups.
+     *
+     * When the activity in scope (or, for the whole course, the course) uses separate groups and the viewer
+     * cannot access all groups, only members of the viewer's own groups are shown.
+     *
+     * @param \stdClass $course
+     * @param int $cmid activity in scope, 0 for the whole course
+     * @param int $viewerid
+     * @return int[]|null user ids, or null for everyone
+     */
+    public static function visible_userids(\stdClass $course, int $cmid, int $viewerid): ?array {
+        $context = \context_course::instance($course->id);
+        if (has_capability('moodle/site:accessallgroups', $context, $viewerid)) {
+            return null;
+        }
+        $grouping = (int) ($course->defaultgroupingid ?? 0);
+        $cms = $cmid ? get_fast_modinfo($course)->get_cms() : [];
+        if (isset($cms[$cmid])) {
+            $groupmode = groups_get_activity_groupmode($cms[$cmid], $course);
+            $grouping = (int) $cms[$cmid]->groupingid;
+        } else {
+            $groupmode = groups_get_course_groupmode($course);
+        }
+        if ($groupmode != SEPARATEGROUPS) {
+            return null;
+        }
+        $groups = groups_get_all_groups((int) $course->id, $viewerid, $grouping, 'g.id');
+        if (!$groups) {
+            return [];
+        }
+        return array_map('intval', array_keys(groups_get_groups_members(array_keys($groups)) ?: []));
     }
 
     /**

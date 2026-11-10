@@ -34,6 +34,9 @@ class metrics {
     /** @var int Most measurement rows one browser session may create (the page-view id comes from the client). */
     public const MAX_PER_SESSION = 300;
 
+    /** @var int Most measurement rows one user may create in a day, across all their sessions. */
+    public const MAX_PER_USER_DAY = 300;
+
     /** @var int Most recent rows read for the calibration view. */
     public const MAX_CALIBRATION_ROWS = 20000;
 
@@ -50,7 +53,7 @@ class metrics {
      * @return void
      */
     public static function save(\context_module $context, string $pageview, array $summary): void {
-        global $DB, $SESSION;
+        global $DB, $SESSION, $USER;
         $cmid = (int) $context->instanceid;
         $row = (object) ['timemodified' => time()];
         foreach (self::FIELDS as $field) {
@@ -63,8 +66,9 @@ class metrics {
             $DB->update_record(self::TABLE, $row);
             return;
         }
+        // The session count is a fast path; logging in again resets it, so the real limit is per user and day.
         $SESSION->local_nomoreai_metricrows = (int) ($SESSION->local_nomoreai_metricrows ?? 0) + 1;
-        if ($SESSION->local_nomoreai_metricrows > self::MAX_PER_SESSION) {
+        if ($SESSION->local_nomoreai_metricrows > self::MAX_PER_SESSION || !self::count_user_row((int) $USER->id)) {
             return;
         }
         $row->pageview = $pageview;
@@ -72,6 +76,35 @@ class metrics {
         $row->courseid = (int) $DB->get_field('course_modules', 'course', ['id' => $cmid]);
         $row->timecreated = $row->timemodified;
         $DB->insert_record(self::TABLE, $row);
+    }
+
+    /**
+     * Count one new measurement row against the user's daily limit.
+     *
+     * The count is kept in an application cache keyed by user and day, so it holds across sessions; the rows
+     * themselves stay anonymous.
+     *
+     * @param int $userid
+     * @param int|null $now
+     * @return bool whether the row may be stored
+     */
+    public static function count_user_row(int $userid, ?int $now = null): bool {
+        $cache = \cache::make('local_nomoreai', 'metricrows');
+        $key = self::user_day_key($userid, $now);
+        $count = (int) $cache->get($key) + 1;
+        $cache->set($key, $count);
+        return $count <= self::MAX_PER_USER_DAY;
+    }
+
+    /**
+     * The cache key of a user's daily row count.
+     *
+     * @param int $userid
+     * @param int|null $now
+     * @return string
+     */
+    public static function user_day_key(int $userid, ?int $now = null): string {
+        return 'u' . $userid . '_' . date('Ymd', $now ?? time());
     }
 
     /**
