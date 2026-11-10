@@ -21,7 +21,7 @@ labels:
   - fully-free
 screenshots:
   - path: .camp/screenshots/01-signals-report.png
-    caption: 'The teacher''s AI agent signals report: signals per student and activity, with a reminder that they are indicators, not proof.'
+    caption: 'The teacher''s AI agent signals report: signals per student and activity, with a reminder they are indicators, not proof.'
   - path: .camp/screenshots/02-signals-one-activity.png
     caption: 'The same report filtered to one quiz: work submitted through a token, an automated browser, AI agent traces in the page.'
   - path: .camp/screenshots/03-signal-legend.png
