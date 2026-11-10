@@ -4,22 +4,53 @@ All notable changes to this plugin are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.1.3] - 2026-11-10
 
 ### Added
 
-- Signals `centre_clicks`, `machine_typing` and `instant_interaction` from new browser measurements (click
-  offset from the control's centre, median and variation of key gaps, time to the first click or answer),
-  with threshold settings `centreratio`, `centreminclicks`, `keymedianms`, `keycv`, `keyminintervals` and
-  `instantms`.
-- Table `local_nomoreai_metric` (anonymous per-page-view measurements) and a Calibration report tab.
+- Signals `centre_clicks`, `machine_typing` and `instant_interaction` (`signals::CENTRE_CLICKS`,
+  `MACHINE_TYPING`, `INSTANT`) from new browser measurements in `amd/src/monitor.js`: click offset from the
+  control's centre, median and variation (standard deviation / mean) of the gaps between typed keys, time from
+  page ready to the first click or answer, plus pointer-move and scroll counts. Evaluated in
+  `pageview::evaluate()` against the new settings `centreratio` (0.6), `centreminclicks` (5), `keymedianms`
+  (30), `keycv` (0.15), `keyminintervals` (20) and `instantms` (500).
+- `local_nomoreai_record_pageview` accepts the optional parameters `measuredclicks`, `centreclicks`,
+  `keyintervals`, `keymedian`, `keycv`, `firstinputms`, `pointermoves` and `scrolls` (all `VALUE_DEFAULT`, so
+  pages still running the previous script keep working); values are clamped server side.
+- Table `local_nomoreai_metric` (`db/upgrade.php` step 2026101400): anonymous per-page-view measurements, no
+  user id, unique on `pageview, cmid`. Written by `classes/local/metrics.php`, capped at 300 rows per session
+  and per user and day (application cache `metricrows`, `db/caches.php`), purged by the existing
+  `purge_signals` task and on course reset, course deletion and activity deletion.
+- Calibration report tab: percentiles of each measure and the number of page views each current threshold
+  would flag (`metrics::calibration()`), computed from the latest 20000 measurements of the site, course or
+  activity shown.
+- Capability `local/nomoreai:purgetokens` (`RISK_DATALOSS | RISK_CONFIG`, manager archetype), required by the
+  purge action on `tokens.php`; the purge button is only shown with it.
 - `pix/icon.svg`.
+- New PHPUnit tests (`tests/behaviour_test.php`, `tests/reports_test.php`, additions to
+  `detection_test.php`, `enforcer_test.php`, `lifecycle_test.php`) and Behat steps for the report tabs.
 
 ### Changed
 
-- The site dashboard and the course report are now tabbed reports: Users, Courses and activities, Signal
-  types and Identified agents, sharing one implementation (`classes/local/reports.php`). Users, courses and
-  activities are linked everywhere; users link to their course profile.
+- The site dashboard (`dashboard.php`) and the course report (`report.php`) share one implementation,
+  `classes/local/reports.php`, with the tabs Users, Courses and activities, Signal types (including the weekly
+  counts), Calibration and Identified agents. Users, courses and activities are linked everywhere; users link
+  to their course profile, or their site profile for site-level signals.
+- The course report honours separate groups for viewers without `moodle/site:accessallgroups`.
+- `local/nomoreai:viewdashboard` now covers viewing the token audit only, no longer the purge.
+- Lang strings: added the tab, calibration, threshold-setting and new-signal strings; removed
+  `dashboard_clients`, `dashboard_topactivities` and `student`; `monitoring_desc` describes the new
+  measurements.
+
+### Fixed
+
+- Login-page agent signals are deduplicated per hour by signal type and hashed address instead of the
+  header-supplied client name, so varying that header no longer creates new rows, and are capped at
+  `enforcer::LOGIN_SIGNALS_PER_HOUR` (500) per clock hour site-wide; above the cap a request is still refused
+  in Enforce, just not recorded.
+- Course deletion now also removes the `local_nomoreai_cm` (Web browser only) rows of its activities, which
+  core deletes without raising `course_module_deleted`.
+- The supported-range comment in the CI workflow.
 
 ## [0.1.2] - 2026-10-04
 

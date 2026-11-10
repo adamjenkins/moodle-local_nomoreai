@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_nomoreai';
-$plugin->version   = 2026111000;
+$plugin->version   = 2026111001;
 $plugin->requires  = 2026042000;
 $plugin->supported = [502, 503];
-$plugin->release   = '0.1.2';
+$plugin->release   = '0.1.3';
 $plugin->maturity  = MATURITY_BETA;
